@@ -31,6 +31,7 @@ public class Server extends JFrame{
 		add(new JScrollPane(chatWindow));
 		setSize(300, 150);				// JScrollPane provides scrollable view of a component (JTextArea)
 		setVisible(true);
+		chatWindow.setEditable(false);
 	}
 
 	public void startRunningServer(){	// Setting up and running server
@@ -50,7 +51,7 @@ public class Server extends JFrame{
 				}
 			}
 		}
-		catch(IOException ioException{	// Tracing code to try to identify where error occured (or in what method)
+		catch(IOException ioException){	// Tracing code to try to identify where error occured (or in what method)
 			ioException.printStackTrace();
 		}
 	}
@@ -59,31 +60,75 @@ public class Server extends JFrame{
 	public void waitForConnection() throws IOException{	
 		showMessage("Waiting for someone to connect. . . \n");
 		connection = server.accept();	// Waiting for socket to get connected
-		showMessage("Now connected to " + connection.getInetAddress().getHostName());
+		showMessage("Now connected to Local Host" + connection.getInetAddress().getHostName());
 	}
 
 										// Get stream to send and receive data
 	private void setupStreams() throws IOException{
 		output = new ObjectOutputStream(connection.getOutputStream());
-		output.flush();					// For limne above - Creating the pathway that allows us to connect to another computer (the computer that connection made)
+		output.flush();					// For line above - Creating the pathway that allows us to connect to another computer (the computer that connection made)
 										// Flush pushes through (to output user) any leftover data bytes that may not have been fully sent
 		input = new ObjectInputStream(connection.getInputStream());
-		showMessage("\n Streams are now setup. \n");
+		showMessage("\n" +"Streams are now setup. \n");
 	}
-
+											
 	private void duringChat() throws IOException{
 		String message = "You are now connected!";
 		sendMessage(message);
-		ableToType(true);
+		ableToType(true);				
 		do{
-			try{
+			try{						
 				message = (String) input.readObject();
 				showMessage("\n" + message);
-			}
+			}							
 			catch(ClassNotFoundException classNotFound){
 				showMessage("\n Unreadable information type from user");
-			}
+			}							
 		}
-		while (!message.equals("CLIENT - END"))
+		while (!message.equals("CLIENT - END"));
+	}
+
+	private void closeStream(){			// Close streams and sockets after done the chat
+		showMessage("\n Closing connections... \n");
+		ableToType(false);
+		try{
+			output.close();
+			input.close();
+			connection.close();
+		}								
+		catch(IOException ioException){
+			ioException.printStackTrace();
+		}
+	}
+
+	private void sendMessage(String message){
+		try{
+			output.writeObject("SERVER - " + message);
+			output.flush();				
+			showMessage("\nSERVER - " + message);
+		}
+		catch(IOException ioException){
+			chatWindow.append("\n Error: Cannot send that message");
+		}
+	}
+										
+	private void showMessage(final String text){
+		SwingUtilities.invokeLater(		// Updating chatWindow instead of creating new GUI
+			new Runnable(){				// In a thread so need a runnable
+				public void run(){
+					chatWindow.append(text);
+				}
+			}
+		);
+	}
+
+	private void ableToType(final boolean ability_to_type){
+		SwingUtilities.invokeLater(		
+			new Runnable(){				
+				public void run(){
+					userText.setEditable(ability_to_type);
+				}
+			}
+		);
 	}
 }
